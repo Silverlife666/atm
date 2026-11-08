@@ -1,0 +1,421 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Moduł 24 · Archiwum rozliczenia pracy</title><style>
+:root{--navy:#123b69;--ink:#152238;--pale:#eef4fb;--line:#cbd8e6;--green:#16825d;--red:#ae3d3d}
+*{box-sizing:border-box}
+body{margin:0;background:#eef3f8;color:var(--ink);font:16px Inter,"Segoe UI",Arial,sans-serif}
+header{background:var(--navy);color:#fff;padding:22px max(24px,calc((100vw - 1280px)/2));font-size:1.5rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.hright{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.85rem}
+.hright input{width:170px;margin:0}
+.sync{font-size:.8rem;font-weight:700;background:#ffffff26;color:#fff;padding:6px 12px;border-radius:15px}.hbtn{background:#fff;color:var(--navy);padding:8px 12px;font-size:.85rem}
+.wrap{max-width:1280px;margin:auto;padding:26px 24px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+button,label.file{border:0;border-radius:7px;padding:10px 14px;background:var(--navy);color:#fff;font:inherit;font-weight:800;cursor:pointer;display:inline-block}
+button:hover,label.file:hover{filter:brightness(1.12)}
+#auth{position:fixed;inset:0;background:#eef3f8;display:none;align-items:center;justify-content:center;z-index:99;padding:20px}#auth .panel{max-width:420px;width:100%}
+.tile{display:flex;align-items:center;gap:8px;background:var(--pale);border-radius:8px;padding:10px;font-size:.85rem;text-transform:none;letter-spacing:0;font-weight:600}.tile input{width:auto;margin:0}
+button.sec{background:#e5edf7;color:var(--navy);margin-top:4px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.tabs button{background:#e5edf7;color:var(--navy)}
+.tabs button.active{background:var(--navy);color:#fff}
+section{display:none;margin-top:18px}.show{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 6px 20px #17395b12}
+.panel h3{margin:0 0 14px;font-size:1.1rem}
+.card{background:var(--pale);border-radius:9px;padding:12px 14px}
+.metric{font-size:.68rem;font-weight:800;color:#60738a;letter-spacing:.04em;text-transform:uppercase}
+.metric b{display:block;margin-top:4px;font-size:1.5rem;letter-spacing:0;color:var(--navy);text-transform:none}
+label{display:block;font-size:.75rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+label.file{text-transform:none;font-size:inherit;letter-spacing:0}label.file input{display:none}
+label.chk{display:flex;align-items:center;gap:8px;margin-top:28px}label.chk input{width:auto;margin:0}
+input,select,textarea{width:100%;margin:5px 0 8px;padding:10px;background:#fff;color:var(--ink);border:1px solid #b8c6d7;border-radius:7px;font:inherit;font-weight:400;letter-spacing:0;text-transform:none}
+input:focus,select:focus,textarea:focus{outline:2px solid #123b6933;border-color:var(--navy)}
+textarea{height:70px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.82rem;border:1px solid var(--line)}
+td,th{border:1px solid var(--line);padding:8px;text-align:left}
+th{background:var(--navy);color:#fff;font-size:.75rem;letter-spacing:.04em}
+tr:nth-child(even) td{background:#f6f9fc}
+td button{padding:5px 9px;font-size:.75rem;margin-right:4px}
+.hint{color:#64748b;font-size:.85rem}.danger{background:var(--red)}.ok{background:var(--green)}
+.msg{margin:10px 0 0;font-weight:700}.msg.err{color:var(--red)}.msg.good{color:var(--green)}
+h4.mon{margin:22px 0 4px;font-size:1rem;letter-spacing:.04em;color:var(--navy)}
+.pap{margin:12px 0 0;font-size:.9rem}
+.ps{margin:10px 0;line-height:1.6;font-size:.9rem}
+.rmeta{display:flex;justify-content:space-between;gap:16px;font-weight:700}
+.tot{margin-top:10px;font-weight:700}
+@media(max-width:900px){.wrap{padding:16px}header{font-size:1.2rem}.tabs button{flex:1 1 140px}}
+</style></head><body>
+<header><span>🗂️ Moduł 24 · Archiwum rozliczenia pracy</span><span class="hright"><span id="cloudSt" class="sync">Chmura: wyłączona</span><button class="hbtn" onclick="cloudRefresh()">🔄 Odśwież z chmury</button><span id="userBar"></span><span>Aktywne zlecenie:</span><input id="activeOrder" placeholder="np. ZL-2026/101" oninput="setActive(this.value)"></span></header>
+<main class="wrap" id="app" style="display:none">
+<p class="hint" style="margin-top:0">Dane są zapisywane niezależnie od zleceń (w tej przeglądarce). Powiązanie ze zleceniem jest opcjonalne.</p>
+<div class="tabs"><button id="tb_entries" onclick="tab('entries',this)" class="active">Wpisy pracy</button><button id="tb_changeovers" onclick="tab('changeovers',this)">Przezbrojenia</button><button id="tb_reports" onclick="tab('reports',this)">Raporty</button><button id="tb_data" onclick="tab('data',this)">Import / eksport</button><button id="tb_calc" onclick="tab('calc',this)">Kalkulator</button><button id="tb_config" onclick="tab('config',this)">Konfiguracja</button><button id="tb_log" onclick="tab('log',this)">Log</button></div>
+
+<div class="panel" id="fpanel" style="margin-top:16px"><h3 style="margin-bottom:10px">Filtry i sortowanie</h3>
+<div class="grid">
+<label>Szukaj<input id="fQ" placeholder="pracownik, papier, uwagi…" oninput="renderAll()"></label>
+<label>Pracownik<select id="fEmp" onchange="renderAll()"></select></label>
+<label>Papier<select id="fPaper" onchange="renderAll()"></select></label>
+<label>Czynność<select id="fAct" onchange="renderAll()"></select></label>
+<label>Data od<input id="fFrom" type="date" onchange="renderAll()"></label>
+<label>Data do<input id="fTo" type="date" onchange="renderAll()"></label>
+<label>Sortowanie<select id="fSort" onchange="renderAll()"><option value="ins">Kolejność zapisu</option><option value="date_desc">Data: od najnowszych</option><option value="date_asc">Data: od najstarszych</option><option value="paper">Papier A–Z</option><option value="emp">Pracownik A–Z</option><option value="qty_desc">Ilość wykonana: malejąco</option><option value="waste_desc">Odpad: malejąco</option><option value="dur_desc">Czas pracy: malejąco</option></select></label>
+<label>Widok wpisów<select id="fView" onchange="renderAll()"><option value="group">Grupy: miesiąc → papier (jak raport)</option><option value="flat">Jedna lista</option></select></label></div>
+<button class="sec" onclick="quick('this')">Ten miesiąc</button> <button class="sec" onclick="quick('prev')">Poprzedni miesiąc</button> <button class="sec" onclick="quick('30')">Ostatnie 30 dni</button> <button class="sec" onclick="clearF()">✖ Wyczyść filtry</button> <button class="sec" onclick="csvEntries()">⬇️ CSV wpisów (widok z filtrów)</button>
+<p id="fInfo" class="hint" style="margin-bottom:0"></p></div>
+<section id="entries" class="show">
+<div class="grid" id="sumCards"></div>
+<div class="panel" style="margin-top:16px"><h3 id="eTitle">Dodaj wpis</h3>
+<div class="grid">
+<label>Data<input id="eDate" type="date"></label>
+<label>Pracownik<input id="eEmp" list="empList"></label>
+<label>Czynność<select id="eAct"></select></label>
+<label>Ilość wykonana<input id="eQty" type="number" min="0" step="1" value="0"></label>
+<label>Ilość odpadu<input id="eWaste" type="number" min="0" step="1" value="0"></label>
+<label>Jednostka<select id="eUnit"></select></label>
+<label>Zmiana<select id="eShift"></select></label>
+<label>Czas pracy (min)<input id="eDur" type="number" min="0" step="5" value="0"></label>
+<label>Rodzaj papieru<select id="ePType"></select></label>
+<label>Nazwa papieru<input id="ePName" list="paperList" placeholder="wpisz lub wybierz"></label>
+<label class="chk"><input id="eLink" type="checkbox">Przypisz do aktywnego zlecenia</label></div>
+<label>Uwagi<textarea id="eNotes"></textarea></label>
+<button class="ok" id="eSave" onclick="saveEntry()">➕ Dodaj wpis</button> <button id="eCancel" style="display:none" onclick="resetEntry()">Anuluj edycję</button>
+<p id="eMsg" class="msg"></p></div>
+<div class="panel"><h3>Wpisy archiwum</h3><div class="tw" id="eTable"></div></div>
+</section>
+
+<section id="changeovers">
+<div class="panel"><h3 id="cTitle">Przezbrojenie maszyny</h3>
+<div class="grid">
+<label>Data przezbrojenia<input id="cDate" type="date"></label>
+<label>Pracownik<input id="cEmp" list="empList"></label>
+<label>Maszyna / stanowisko<input id="cMach"></label>
+<label>Następne zlecenie<input id="cNext"></label>
+<label>Czas przezbrojenia (min)<input id="cDur" type="number" min="0" step="5" value="0"></label>
+<label class="chk"><input id="cLink" type="checkbox">Przypisz do aktywnego zlecenia</label></div>
+<label>Uwagi do przezbrojenia<textarea id="cNotes"></textarea></label>
+<button class="ok" id="cSave" onclick="saveCo()">➕ Dodaj przezbrojenie</button> <button id="cCancel" style="display:none" onclick="resetCo()">Anuluj edycję</button>
+<p id="cMsg" class="msg"></p></div>
+<div class="panel"><h3>Lista przezbrojeń</h3><div class="tw" id="cTable"></div></div>
+</section>
+
+<section id="reports"><div class="panel"><h3>Raporty PDF</h3>
+<p class="hint">Raport jest generowany i pobierany jako plik PDF (przy pierwszym użyciu strona pobiera generator PDF, więc potrzebny jest internet).</p>
+<button onclick="report(false)">📄 Pobierz pełny raport archiwum (PDF)</button> <button onclick="report('filter')">📄 Pobierz raport wg bieżących filtrów (PDF)</button> <button id="rOrder" onclick="report(true)">📄 Pobierz raport bieżącego zlecenia (PDF)</button>
+<p id="rMsg" class="hint"></p></div>
+<div class="panel"><h3 id="sumTitle">Podsumowanie według nazwy papieru</h3><div class="tw" id="actSum"></div></div></section>
+
+<section id="data"><div class="panel"><h3>Przenoszenie danych</h3>
+<button onclick="exportJson()">⬇️ Eksportuj całe archiwum (JSON)</button>
+<label class="file">⬆️ Wczytaj plik importu (JSON)<input type="file" accept="application/json,.json" onchange="pickImport(this)"></label>
+<p id="impInfo" class="hint"></p><button id="impBtn" class="ok" style="display:none" onclick="doImport()">📥 Scal z bieżącym archiwum</button>
+<p id="impMsg" class="msg"></p>
+<p class="hint">Import scala dane: nie usuwa ani nie nadpisuje lokalnego archiwum, a identyczne rekordy są pomijane jako duplikaty. Format jest zgodny z eksportem modułu 24 z aplikacji (wersja 1).</p></div></section>
+<section id="calc"><div class="panel"><h3>🧮 Kalkulator</h3><p class="hint">Zakładka w przygotowaniu.</p></div></section>
+<section id="config">
+<div class="panel"><h3>Użytkownicy i role</h3><p class="hint">Konta są wspólne z modułem bobin (ta sama lista i ten sam PIN). Zmiana roli, reset PIN i usunięcie konta dotyczą obu modułów.</p><div class="tw" id="uList"></div>
+<div class="grid" style="margin-top:12px"><label>Nowy użytkownik<input id="nuN"></label><label>PIN tymczasowy<input id="nuP" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label><label>Rola<select id="nuR"></select></label></div><button class="ok" onclick="addUser()">➕ Dodaj użytkownika</button><p id="cfMsg" class="msg"></p></div>
+<div class="panel"><h3>Uprawnienia w module 24</h3><label>Użytkownik<select id="pmU" onchange="renderPerms()"></select></label><div id="pmBox" class="grid" style="margin-top:10px"></div></div>
+<div class="panel"><h3>Ustawienia</h3><div class="grid"><label>Auto-wylogowanie po bezczynności (min, 0 = wyłączone)<input id="cfIdle" type="number" min="0"></label><label>Nazwa firmy w nagłówku raportu PDF<input id="cfCompany"></label><label>Stopka raportu PDF<input id="cfFooter"></label></div><button class="ok" onclick="saveSettings()">💾 Zapisz ustawienia</button><p id="cfSetMsg" class="msg"></p></div>
+<div class="panel"><h3>Synchronizacja z Supabase (ta sama tabela co moduł 24)</h3>
+<p class="hint">Tabela <b>application_state</b>, rekord o wskazanym kluczu (<b>state_key</b>). Użyj wyłącznie klucza publicznego (<b>anon</b> albo <b>publishable</b>) – nigdy service_role ani secret. Dostęp do tego jednego rekordu musi zezwalać polityka RLS.</p>
+<div class="grid"><label>Adres projektu<input id="clUrl" placeholder="https://xxxx.supabase.co"></label><label>Klucz anon<input id="clKey" type="password" autocomplete="off"></label><label>state_key rekordu archiwum<input id="clSk" placeholder="wartość z kolumny state_key"></label><label class="chk"><input id="clOn" type="checkbox">Zapisuj do chmury</label></div>
+<button class="ok" onclick="cloudConnect()">🔌 Zapisz ustawienia i połącz</button>
+<p id="clMsg" class="msg"></p>
+<p class="hint">Po połączeniu dane z chmury zastępują lokalną kopię (zrób wcześniej eksport JSON). Każda zmiana jest zapisywana do chmury z kontrolą wersji: gdy ktoś zmienił rekord w międzyczasie, strona odświeży dane i poprosi o powtórzenie operacji, zamiast nadpisać cudze zmiany. Bez potwierdzonego zapisu w chmurze zmiana nie jest zapisywana.</p></div>
+</section>
+<section id="log"><div class="panel"><h3>Log zdarzeń</h3><div class="grid"><label>Szukaj<input id="lQ" oninput="renderLog()"></label><label>Użytkownik<select id="lU" onchange="renderLog()"></select></label><label>Zdarzenie<select id="lA" onchange="renderLog()"></select></label><label>Od<input id="lF" type="date" onchange="renderLog()"></label><label>Do<input id="lT" type="date" onchange="renderLog()"></label></div><p id="lInfo" class="hint"></p><div class="tw" id="lTable"></div></div></section>
+</main>
+<div id="auth"></div>
+<datalist id="empList"></datalist><datalist id="paperList"></datalist>
+<script>
+const FMT='system-zarzadzania-produkcja/work-settlement-archive',LS='archiwum_rozliczen_pracy_modul24',LSA='archiwum_rozliczen_pracy_aktywne',LSO='archiwum_rozliczen_pracy_operator';
+const ACT=['Stosy ucięte','Rolki nakręcone','Pakowanie','Kontrola jakości','Inne'],UNITS=['szt.','rolki','kg','palety','godz.'],SHIFTS=['I zmiana','II zmiana','III zmiana','—'],PAPERS=['Papier powlekany','Papier niepowlekany','Kraft','Makulaturowy','Tektura','Inny'];
+const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+let A={entries:[],changeovers:[],extra:{}},active='',op='',eIdx=-1,cIdx=-1,pending=null;
+try{const v=JSON.parse(localStorage.getItem(LS)||'null');if(v&&typeof v==='object'){A.extra=v.extra&&typeof v.extra==='object'?v.extra:{};A.entries=Array.isArray(v.entries)?v.entries:[];A.changeovers=Array.isArray(v.changeovers)?v.changeovers:[]}active=localStorage.getItem(LSA)||'';op=localStorage.getItem(LSO)||''}catch(e){}
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(A))}catch(e){alert('Nie udało się zapisać danych w przeglądarce.')}};
+/* ---- chmura (Supabase PostgREST, tabela application_state) ---- */
+const LSC='archiwum_rozliczen_pracy_chmura';let CL={url:'',key:'',sk:'',on:false,ver:null,exists:false};
+const CLOUD_DEFAULT={url:'',key:'',sk:'operational_json:archiwum_rozliczen_pracy.json'}; /* wklej adres i klucz anon, aby nowe urządzenia łączyły się same */
+try{CL={...CL,...JSON.parse(localStorage.getItem(LSC)||'{}'),ver:null,exists:false}}catch(e){}
+if(!CL.sk)CL.sk=CLOUD_DEFAULT.sk;if(!CL.url&&CLOUD_DEFAULT.url){CL.url=CLOUD_DEFAULT.url;CL.key=CLOUD_DEFAULT.key;CL.on=true}
+const cloudOn=()=>!!(CL.on&&CL.url&&CL.key&&CL.sk),enc=encodeURIComponent;
+function cst(t){$('cloudSt').textContent='Chmura: '+t}
+async function sb(method,path,body,prefer){const r=await fetch(CL.url.replace(/\/+$/,'')+'/rest/v1/'+path,{method,headers:{apikey:CL.key,...(CL.key.startsWith('sb_')?{}:{Authorization:'Bearer '+CL.key}),Accept:'application/json','Content-Type':'application/json',Prefer:prefer||'return=representation'},body:body?JSON.stringify(body):undefined});
+ const t=await r.text();if(!r.ok){const e=new Error('HTTP '+r.status+(t?' '+t.slice(0,160):''));e.status=r.status;throw e}return t?JSON.parse(t):null}
+const toPayload=n=>({...(n.extra||{}),entries:n.entries,changeovers:n.changeovers});
+function fromPayload(p){p=p&&typeof p==='object'&&!Array.isArray(p)?p:{};const{entries,changeovers,...extra}=p;return{entries:Array.isArray(entries)?entries.filter(x=>x&&typeof x==='object'):[],changeovers:Array.isArray(changeovers)?changeovers.filter(x=>x&&typeof x==='object'):[],extra}}
+async function cloudPull(){const rows=await sb('GET','application_state?state_key=eq.'+enc(CL.sk)+'&select=payload,updated_at');
+ if(rows&&rows.length){CL.ver=rows[0].updated_at;CL.exists=true;A=fromPayload(rows[0].payload);save();return true}
+ CL.ver=null;CL.exists=false;return false}
+async function cloudWrite(n){const body={payload:toPayload(n),updated_at:new Date().toISOString()};let r;
+ if(CL.exists){r=await sb('PATCH','application_state?state_key=eq.'+enc(CL.sk)+'&updated_at=eq.'+enc(CL.ver),body);if(!r||!r.length){const e=new Error('conflict');e.conflict=true;throw e}}
+ else{try{r=await sb('POST','application_state',{state_key:CL.sk,...body})}catch(e){if(e.status===409)e.conflict=true;throw e}}
+ CL.exists=true;CL.ver=r&&r[0]&&r[0].updated_at||body.updated_at}
+/* wykonuje zmianę na kopii; zapis do chmury musi się udać, zanim zmiana trafi do stanu. Zwraca tekst błędu albo '' */
+async function commit(fn){const n=JSON.parse(JSON.stringify(A));fn(n);
+ if(cloudOn()&&!CL.exists&&!confirm('W chmurze nie ma rekordu „'+CL.sk+'”. Utworzyć NOWY rekord z danymi lokalnymi? Jeśli to ma być istniejące archiwum modułu 24, kliknij Anuluj i sprawdź state_key.'))return 'Anulowano – nie utworzono rekordu w chmurze.';
+ if(cloudOn()){cst('zapisuję…');try{await cloudWrite(n)}catch(e){
+  if(e.conflict){try{await cloudPull();renderAll();logEv('Konflikt zapisu','dane w chmurze zmienione przez inną osobę');cst('odświeżono');return 'Dane w chmurze zostały zmienione przez kogoś innego. Odświeżono widok – powtórz operację.'}catch(e2){}}
+  cst('błąd');return 'Nie zapisano w chmurze: '+e.message}cst('połączono')}
+ A=n;save();return ''}
+async function cloudRefresh(){if(!cloudOn()){cst('wyłączona');return}cst('pobieram…');try{const ok=await cloudPull();renderAll();cst(ok?'połączono':'brak rekordu')}catch(e){cst('błąd')}}
+async function cloudConnect(){if(!can('config'))return denied();CL.url=$('clUrl').value.trim();CL.key=$('clKey').value.trim();CL.sk=$('clSk').value.trim();CL.on=$('clOn').checked;
+ try{localStorage.setItem(LSC,JSON.stringify({url:CL.url,key:CL.key,sk:CL.sk,on:CL.on}))}catch(e){}logEv('Chmura: zmiana ustawień',CL.url+' · '+CL.sk+' · zapis '+(CL.on?'włączony':'wyłączony'));
+ if(!cloudOn()){cst('wyłączona');return msg('clMsg','Ustawienia zapisano. Aby łączyć się z chmurą, wypełnij wszystkie pola i zaznacz „Zapisuj do chmury”.',1)}
+ if(/service_role/i.test(CL.key)||/^sb_secret_/.test(CL.key)||(CL.key.split('.')[1]&&(()=>{try{return JSON.parse(atob(CL.key.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).role==='service_role'}catch(e){return false}})()))return msg('clMsg','To jest klucz service_role – nie wolno go używać w przeglądarce. Wklej klucz anon.',0);
+ if((A.entries.length||A.changeovers.length)&&!confirm('Lokalne dane zostaną zastąpione danymi z chmury (jeśli rekord istnieje). Kontynuować? Zrób wcześniej eksport JSON.'))return;
+ cst('łączę…');try{const ok=await cloudPull();renderAll();cst(ok?'połączono':'brak rekordu');
+  if(ok)msg('clMsg',`Połączono. Pobrano wpisy: ${A.entries.length}, przezbrojenia: ${A.changeovers.length}.`,1);
+  else{let d='';try{const v=await sb('GET','application_state?select=state_key&limit=10');d=v&&v.length?' Rekordy widoczne dla tego klucza: '+v.map(x=>'„'+x.state_key+'”').join(', ')+'.':' Ten klucz nie widzi żadnego rekordu tabeli (sprawdź RLS, uprawnienia GRANT i czy adres projektu jest tym samym, w którym działa SQL).'}catch(e2){d=' (diagnostyka nieudana: '+e2.message+')'}
+   msg('clMsg',`Połączono, ale nie znaleziono rekordu o state_key „${CL.sk}” (${CL.sk.length} znaków).`+d+' NIE zapisuj niczego, dopóki klucz się nie zgadza – pierwszy zapis utworzyłby nowy rekord.',0)}}catch(e){cst('błąd');msg('clMsg','Błąd połączenia: '+e.message+' (sprawdź adres, klucz anon i politykę RLS)',0)}}
+function initCloud(){$('clUrl').value=CL.url;$('clKey').value=CL.key;$('clSk').value=CL.sk;$('clOn').checked=CL.on;cst(cloudOn()?'łączę…':'wyłączona');if(cloudOn())cloudRefresh()}
+
+function setActive(v){active=v.trim();try{localStorage.setItem(LSA,active)}catch(e){}renderAll()}
+function msg(id,t,ok){const m=$(id);m.textContent=t;m.className='msg '+(ok?'good':'err')}
+function tab(id,btn){$('fpanel').style.display=(id==='entries'||id==='changeovers')?'':'none';document.querySelectorAll('section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b===btn))}
+const opts=(a,sel)=>a.map(x=>`<option${x===sel?' selected':''}>${esc(x)}</option>`).join('');
+const num=x=>+x||0,fmt=x=>Number(x).toLocaleString('pl-PL',{maximumFractionDigits:2});
+function stable(v){if(Array.isArray(v))return v.map(stable);if(v&&typeof v==='object'){const o={};Object.keys(v).sort().forEach(k=>o[k]=stable(v[k]));return o}return v}
+const fp=r=>JSON.stringify(stable(r));
+function initForms(){$('eAct').innerHTML=opts(ACT);$('eUnit').innerHTML=opts(UNITS);$('eShift').innerHTML=opts(SHIFTS);$('ePType').innerHTML=opts(PAPERS);resetEntry();resetCo();$('activeOrder').value=active}
+/* ---- wpisy ---- */
+function resetEntry(){eIdx=-1;$('eTitle').textContent='Dodaj wpis';$('eSave').textContent='➕ Dodaj wpis';$('eCancel').style.display='none';
+ Object.assign($('eDate'),{value:today()});['eQty','eWaste','eDur'].forEach(i=>$(i).value=0);['eNotes','ePName'].forEach(i=>$(i).value='');$('eLink').checked=false;$('eAct').selectedIndex=0;$('eUnit').selectedIndex=0;$('eShift').selectedIndex=0;$('ePType').selectedIndex=0}
+async function saveEntry(){if(!can(eIdx>=0?'entry.edit':'entry.add'))return denied();const emp=$('eEmp').value.trim(),pn=$('ePName').value.trim(),q=num($('eQty').value),w=num($('eWaste').value);
+ if(!emp||!pn||(q<=0&&w<=0))return msg('eMsg','Podaj pracownika, nazwę papieru oraz ilość wykonaną lub odpadu.',0);
+ const base=eIdx>=0?A.entries[eIdx]:{},r={...base,date:$('eDate').value||today(),employee:emp,activity:$('eAct').value,quantity:q,waste_quantity:w,unit:$('eUnit').value,shift:$('eShift').value,duration_minutes:num($('eDur').value),paper_type:$('ePType').value,paper_name:pn,order_id:$('eLink').checked?active:'',notes:$('eNotes').value.trim()};
+ if($('eLink').checked&&!active)return msg('eMsg','Najpierw wpisz aktywne zlecenie (nagłówek strony).',0);
+ const idx=eIdx,old=idx>=0?{...A.entries[idx]}:null,err=await commit(n=>{if(idx>=0)n.entries[idx]=r;else n.entries.push(r)});if(err)return msg('eMsg',err,0);logEv(idx>=0?'Wpis: edycja':'Wpis: dodanie',dE(r)+(old?' | zmiany: '+dif(old,r):''));
+ msg('eMsg',idx>=0?'Zmiany zapisano.':'Wpis zapisano w niezależnym archiwum.',1);resetEntry();renderAll()}
+function editEntry(i){if(!can('entry.edit'))return denied();const x=A.entries[i];eIdx=i;$('eTitle').textContent='✏️ Edycja wpisu';$('eSave').textContent='💾 Zapisz zmiany';$('eCancel').style.display='';
+ $('eDate').value=x.date||today();$('eEmp').value=x.employee||'';$('eAct').value=ACT.includes(x.activity)?x.activity:ACT[ACT.length-1];$('eQty').value=num(x.quantity);$('eWaste').value=num(x.waste_quantity);
+ $('eUnit').value=UNITS.includes(x.unit)?x.unit:UNITS[0];$('eShift').value=SHIFTS.includes(x.shift)?x.shift:SHIFTS[SHIFTS.length-1];$('eDur').value=num(x.duration_minutes);
+ $('ePType').value=PAPERS.includes(x.paper_type)?x.paper_type:PAPERS[PAPERS.length-1];$('ePName').value=x.paper_name||'';$('eLink').checked=!!x.order_id;$('eNotes').value=x.notes||'';scrollTo({top:0,behavior:'smooth'})}
+async function delEntry(i){if(!can('entry.delete'))return denied();if(!confirm('Usunąć wybrany wpis?'))return;const old=A.entries[i],err=await commit(n=>n.entries.splice(i,1));if(err)return msg('eMsg',err,0);logEv('Wpis: usunięcie',dE(old));if(eIdx===i)resetEntry();renderAll()}
+/* ---- przezbrojenia ---- */
+function resetCo(){cIdx=-1;$('cTitle').textContent='Przezbrojenie maszyny';$('cSave').textContent='➕ Dodaj przezbrojenie';$('cCancel').style.display='none';$('cDate').value=today();['cMach','cNext','cNotes'].forEach(i=>$(i).value='');$('cDur').value=0;$('cLink').checked=false}
+async function saveCo(){if(!can(cIdx>=0?'co.edit':'co.add'))return denied();const emp=$('cEmp').value.trim(),m=$('cMach').value.trim(),n=$('cNext').value.trim(),d=num($('cDur').value);
+ if(!emp||!m||!n||d<=0)return msg('cMsg','Uzupełnij pracownika, maszynę, następne zlecenie i czas.',0);
+ if($('cLink').checked&&!active)return msg('cMsg','Najpierw wpisz aktywne zlecenie (nagłówek strony).',0);
+ const r={...(cIdx>=0?A.changeovers[cIdx]:{}),date:$('cDate').value||today(),employee:emp,machine:m,next_order:n,duration_minutes:d,order_id:$('cLink').checked?active:'',notes:$('cNotes').value.trim()};
+ const idx=cIdx,old=idx>=0?{...A.changeovers[idx]}:null,err=await commit(n=>{if(idx>=0)n.changeovers[idx]=r;else n.changeovers.push(r)});if(err)return msg('cMsg',err,0);logEv(idx>=0?'Przezbrojenie: edycja':'Przezbrojenie: dodanie',dC(r)+(old?' | zmiany: '+dif(old,r):''));
+ msg('cMsg',idx>=0?'Zmiany zapisano.':'Przezbrojenie zapisano w niezależnym archiwum.',1);resetCo();renderAll()}
+function editCo(i){if(!can('co.edit'))return denied();const x=A.changeovers[i];cIdx=i;$('cTitle').textContent='✏️ Edycja przezbrojenia';$('cSave').textContent='💾 Zapisz zmiany';$('cCancel').style.display='';
+ $('cDate').value=x.date||today();$('cEmp').value=x.employee||'';$('cMach').value=x.machine||'';$('cNext').value=x.next_order||'';$('cDur').value=num(x.duration_minutes);$('cLink').checked=!!x.order_id;$('cNotes').value=x.notes||'';scrollTo({top:0,behavior:'smooth'})}
+async function delCo(i){if(!can('co.delete'))return denied();if(!confirm('Usunąć wybrane przezbrojenie?'))return;const old=A.changeovers[i],err=await commit(n=>n.changeovers.splice(i,1));if(err)return msg('cMsg',err,0);logEv('Przezbrojenie: usunięcie',dC(old));if(cIdx===i)resetCo();renderAll()}
+/* ---- render ---- */
+const nf=n=>Number.isInteger(n)?n.toFixed(1):String(n),ni=n=>String(+(+n).toFixed(2)),hm=m=>{m=Math.round(m);return Math.floor(m/60)+' godz. '+(m%60)+' min'},cmp=(a,b)=>a<b?-1:a>b?1:0,wrap=a=>a.map((x,i)=>({x,i}));
+const btns=(f,i)=>{const k=f==='Entry'?'entry':'co';return`<td style="white-space:nowrap">${can(k+'.edit')?`<button onclick="edit${f}(${i})">✏️</button>`:''}${can(k+'.delete')?`<button class="danger" onclick="del${f}(${i})">🗑️</button>`:''}</td>`};
+const raw=v=>String(v??'');
+function groupData(list){const M={};list.forEach(r=>{const m=String(r.x.date||'').slice(0,7)||'Bez daty',n=String(r.x.paper_name||'')||'Nieokreślony papier';((M[m]||(M[m]={}))[n]||(M[m][n]=[])).push(r)});
+ return Object.keys(M).sort(cmp).map(m=>[m,Object.keys(M[m]).sort(cmp).map(n=>[n,String(M[m][n][0].x.paper_type||'')||'Nieokreślony',M[m][n]])])}
+function grouped(list,acts){const h=['Data','Pracownik','Czynność','Ilość wykonana','Ilość odpadu','Jednostka','Zmiana','Czas (min)','Uwagi'].concat(acts?['Zlecenie','']:[]);
+ return groupData(list).map(([m,ps])=>`<h4 class="mon">MIESIĄC: ${esc(m)}</h4>`+ps.map(([n,t,rows])=>`<div class="pap">Papier: <b>${esc(n)}</b> &nbsp;&nbsp; Rodzaj: ${esc(t)}</div><div class="tw"><table style="margin-top:6px"><tr>${h.map(c=>`<th>${c}</th>`).join('')}</tr>${rows.map(({x,i})=>`<tr><td>${esc(x.date)}</td><td>${esc(x.employee)}</td><td>${esc(x.activity)}</td><td>${esc(raw(x.quantity))}</td><td>${esc(raw(x.waste_quantity??0))}</td><td>${esc(x.unit)}</td><td>${esc(x.shift||'')}</td><td>${esc(raw(x.duration_minutes??0))}</td><td>${esc(x.notes||'—')}</td>${acts?`<td>${esc(x.order_id||'—')}</td>${btns('Entry',i)}`:''}</tr>`).join('')}</table></div>`).join('')).join('')}
+function paperStats(E){const by={};E.forEach(x=>{const k=String(x.paper_name||'')||'Nieokreślony papier',u=String(x.unit||'')||'bez jednostki',o=by[k]||(by[k]={k,n:0,q:{},w:{},d:0});o.n++;o.q[u]=(o.q[u]||0)+num(x.quantity);o.w[u]=(o.w[u]||0)+num(x.waste_quantity);o.d+=Math.trunc(num(x.duration_minutes))});
+ return Object.keys(by).sort(cmp).map(k=>by[k])}
+const unitsTxt=o=>Object.entries(o).map(([u,v])=>ni(v)+' '+u).join(', ');
+function paperSummary(E){return paperStats(E).map(o=>`<div class="ps">Nazwa papieru: <b>${esc(o.k)}</b><br>1. Liczba wpisów: <b>${o.n}</b><br>2. Ilość wykonana: <b>${esc(unitsTxt(o.q))}</b><br>3. Ilość odpadu: <b>${esc(unitsTxt(o.w))}</b><br>4. Czas pracy: <b>${hm(o.d)}</b></div>`).join('')}
+function coBlock(list,acts){const h=['Data','Pracownik','Maszyna','Następne zlecenie','Czas (min)','Uwagi'].concat(acts?['Zlecenie','']:[]);
+ return `<div class="tw"><table><tr>${h.map(c=>`<th>${c}</th>`).join('')}</tr>${list.map(({x,i})=>`<tr><td>${esc(x.date)}</td><td>${esc(x.employee)}</td><td>${esc(x.machine)}</td><td>${esc(x.next_order)}</td><td>${esc(raw(x.duration_minutes??0))}</td><td>${esc(x.notes||'—')}</td>${acts?`<td>${esc(x.order_id||'—')}</td>${btns('Co',i)}`:''}</tr>`).join('')}</table></div><p class="tot">Liczba przezbrojeń: ${list.length} &nbsp; Łączny czas przezbrojeń: ${hm(list.reduce((s,r)=>s+num(r.x.duration_minutes),0))}</p>`}
+const fv=id=>$(id).value,dv=r=>String(r.x.date||'');
+const SORTS={date_asc:(a,b)=>cmp(dv(a),dv(b)),date_desc:(a,b)=>cmp(dv(b),dv(a)),paper:(a,b)=>cmp(String(a.x.paper_name||''),String(b.x.paper_name||''))||cmp(dv(a),dv(b)),emp:(a,b)=>cmp(String(a.x.employee||''),String(b.x.employee||''))||cmp(dv(a),dv(b)),qty_desc:(a,b)=>num(b.x.quantity)-num(a.x.quantity),waste_desc:(a,b)=>num(b.x.waste_quantity)-num(a.x.waste_quantity),dur_desc:(a,b)=>num(b.x.duration_minutes)-num(a.x.duration_minutes)};
+function sortList(list,co){const k=fv('fSort');let f=SORTS[k];if(co&&!['date_asc','date_desc','emp','dur_desc'].includes(k))f=null;return f?[...list].sort((a,b)=>f(a,b)||a.i-b.i):list}
+function inRange(r){const a=fv('fFrom'),b=fv('fTo'),d=dv(r);return(!a||d>=a)&&(!b||d<=b)}
+function fEntries(){const q=fv('fQ').trim().toLowerCase(),emp=fv('fEmp'),pp=fv('fPaper'),ac=fv('fAct');
+ return wrap(A.entries).filter(r=>{const x=r.x;return(!emp||x.employee===emp)&&(!pp||(x.paper_name||'')===pp)&&(!ac||x.activity===ac)&&inRange(r)&&(!q||[x.date,x.employee,x.activity,x.paper_name,x.paper_type,x.notes,x.order_id,x.shift].join(' ').toLowerCase().includes(q))})}
+function fChange(){const q=fv('fQ').trim().toLowerCase(),emp=fv('fEmp');
+ return wrap(A.changeovers).filter(r=>{const x=r.x;return(!emp||x.employee===emp)&&inRange(r)&&(!q||[x.date,x.employee,x.machine,x.next_order,x.notes,x.order_id].join(' ').toLowerCase().includes(q))})}
+function fDesc(){const p=[];if(fv('fEmp'))p.push('pracownik: '+fv('fEmp'));if(fv('fPaper'))p.push('papier: '+fv('fPaper'));if(fv('fAct'))p.push('czynność: '+fv('fAct'));if(fv('fFrom')||fv('fTo'))p.push('okres: '+(fv('fFrom')||'…')+' – '+(fv('fTo')||'…'));if(fv('fQ').trim())p.push('szukaj: „'+fv('fQ').trim()+'”');return p.join('; ')||'wszystkie dane'}
+function popSel(id,vals,all){const el=$(id),cur=el.value;el.innerHTML=`<option value="">${all}</option>`+vals.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(v)}</option>`).join('')}
+function flatTable(list,acts){const h=['Data','Pracownik','Czynność','Papier','Ilość wykonana','Ilość odpadu','Jednostka','Zmiana','Czas (min)','Uwagi'].concat(acts?['Zlecenie','']:[]);
+ return `<div class="tw"><table><tr>${h.map(c=>`<th>${c}</th>`).join('')}</tr>${list.map(({x,i})=>`<tr><td>${esc(x.date)}</td><td>${esc(x.employee)}</td><td>${esc(x.activity)}</td><td>${esc(x.paper_name||'Nieokreślony papier')}</td><td>${esc(raw(x.quantity))}</td><td>${esc(raw(x.waste_quantity??0))}</td><td>${esc(x.unit)}</td><td>${esc(x.shift||'')}</td><td>${esc(raw(x.duration_minutes??0))}</td><td>${esc(x.notes||'—')}</td>${acts?`<td>${esc(x.order_id||'—')}</td>${btns('Entry',i)}`:''}</tr>`).join('')}</table></div>`}
+function quick(k){const d=new Date(),y=d.getFullYear(),m=d.getMonth(),iso=t=>new Date(t-t.getTimezoneOffset()*6e4).toISOString().slice(0,10);let a,b;
+ if(k==='this'){a=new Date(y,m,1);b=new Date(y,m+1,0)}else if(k==='prev'){a=new Date(y,m-1,1);b=new Date(y,m,0)}else{b=d;a=new Date(d.getTime()-29*864e5)}
+ $('fFrom').value=iso(a);$('fTo').value=iso(b);renderAll()}
+function clearF(){['fQ','fEmp','fPaper','fAct','fFrom','fTo'].forEach(i=>$(i).value='');$('fSort').value='ins';$('fView').value='group';renderAll()}
+function csvEntries(){if(!can('export'))return denied();const rows=sortList(fEntries()).map(r=>r.x),H=['Data','Pracownik','Czynność','Papier','Rodzaj papieru','Ilość wykonana','Ilość odpadu','Jednostka','Zmiana','Czas (min)','Zlecenie','Uwagi'],q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',n=v=>String(num(v)).replace('.',',');
+ const t='\ufeff'+[H.map(q).join(';')].concat(rows.map(x=>[q(x.date),q(x.employee),q(x.activity),q(x.paper_name),q(x.paper_type),n(x.quantity),n(x.waste_quantity),q(x.unit),q(x.shift),n(x.duration_minutes),q(x.order_id),q(x.notes)].join(';'))).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));logEv('Eksport CSV',rows.length+' wierszy; filtry: '+fDesc());a.download='wpisy_pracy_widok.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function renderAll(){const E=A.entries,C=A.changeovers;
+ $('empList').innerHTML=[...new Set([...E,...C].map(x=>String(x.employee||'').trim()).filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">`).join('');
+ $('paperList').innerHTML=[...new Set(E.map(x=>String(x.paper_name||'').trim()).filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">`).join('');
+ const uniq=a=>[...new Set(a.map(v=>String(v||'').trim()).filter(Boolean))].sort(cmp);
+ popSel('fEmp',uniq([...E,...C].map(x=>x.employee)),'Wszyscy');popSel('fPaper',uniq(E.map(x=>x.paper_name)),'Wszystkie');popSel('fAct',uniq(E.map(x=>x.activity)),'Wszystkie');
+ const fe=fEntries(),fc=fChange(),Ef=fe.map(r=>r.x),lk=E.filter(x=>active&&x.order_id===active).length+C.filter(x=>active&&x.order_id===active).length;
+ const q=Ef.reduce((t,x)=>t+num(x.quantity),0),w=Ef.reduce((t,x)=>t+num(x.waste_quantity),0),d=Ef.reduce((t,x)=>t+num(x.duration_minutes),0),of=(a,b)=>a===b?String(a):`${a} z ${b}`;
+ $('sumCards').innerHTML=[['Wpisy pracy',of(Ef.length,E.length)],['Przezbrojenia',of(fc.length,C.length)],['Wykonano (suma)',fmt(q)],['Odpad (suma)',fmt(w)],['Odpad do wykonanej',q?fmt(+(w/q*100).toFixed(2))+' %':'—'],['Czas pracy',hm(d)],['Powiązane z aktywnym zleceniem',lk]].map(([a,b])=>`<div class="card metric">${a}<b>${b}</b></div>`).join('');
+ const filtered=fDesc()!=='wszystkie dane';$('fInfo').textContent=`Wyświetlono: wpisy ${Ef.length} z ${E.length}, przezbrojenia ${fc.length} z ${C.length}`+(filtered?` · filtry: ${fDesc()} (papier i czynność dotyczą tylko wpisów)`:'');
+ $('eTable').innerHTML=!E.length?'<p class="hint">Archiwum nie zawiera jeszcze wpisów.</p>':!fe.length?'<p class="hint">Brak wpisów spełniających filtry.</p>':fv('fView')==='flat'?flatTable(sortList(fe),1):grouped(sortList(fe),1);
+ $('cTable').innerHTML=!C.length?'<p class="hint">Brak zapisanych przezbrojeń.</p>':!fc.length?'<p class="hint">Brak przezbrojeń spełniających filtry.</p>':coBlock(sortList(fc,1),1);
+ $('rOrder').disabled=!lk;$('rMsg').textContent=active?`Aktywne zlecenie: ${active} · powiązane rekordy: ${lk}`:'Wpisz aktywne zlecenie w nagłówku, aby wygenerować raport zlecenia.';
+ $('sumTitle').textContent='Podsumowanie według nazwy papieru'+(filtered?' (wg bieżących filtrów)':'');
+ $('actSum').innerHTML=Ef.length?paperSummary(Ef):'<p class="hint">Brak danych.</p>'}
+/* ---- raporty ---- */
+const PDFB='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/';
+function loadPdf(){if(window.pdfMake)return Promise.resolve();const l=u=>new Promise((ok,no)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>no(new Error(u));document.head.appendChild(e)});return l(PDFB+'pdfmake.min.js').then(()=>l(PDFB+'vfs_fonts.js'))}
+const MM=72/25.4,mm=v=>+(v*MM).toFixed(2);
+function pdfDoc(E,C,title){const PW=841.89-2*mm(12),cell=v=>({text:raw(v)}),hd=t=>({text:t,bold:true,color:'#FFFFFF'}),
+ lay=c=>({hLineWidth:()=>.35,vLineWidth:()=>.35,hLineColor:()=>'#CBD5E1',vLineColor:()=>'#CBD5E1',paddingLeft:()=>5,paddingRight:()=>5,paddingTop:()=>5,paddingBottom:()=>5,fillColor:i=>i===0?c.head:(i%2===1?c.odd:'#FFFFFF')}),
+ sec=(t,top,bot,pb)=>({text:t,fontSize:13,bold:true,alignment:'center',lineHeight:16/13,margin:[0,top,0,bot],pageBreak:pb?'before':undefined}),
+ tbl=(mw,head,rows,c,span)=>{const w=mw.map(mm),n=w.length,off=Math.max(0,(PW-w.reduce((a,b)=>a+b,0)-.35*(n+1))/2);return{margin:[off,0,0,mm(4)],table:{headerRows:1,widths:w.map(x=>+(x-10).toFixed(2)),body:[head.map(hd)].concat(rows.length?rows:[[{text:span,colSpan:head.length}].concat(Array(head.length-1).fill({}))])},layout:lay(c)}};
+ const c=[...(CFG.company?[{text:CFG.company,fontSize:9,color:'#475569',alignment:'center',margin:[0,0,0,4]}]:[]),{text:'RAPORT ROZLICZENIA PRACY',fontSize:18,bold:true,alignment:'center',margin:[0,0,0,6+mm(5)]},
+  {text:[{text:'Zlecenie: '},{text:title,bold:true},{text:'\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0Wygenerował: '},{text:op||'—',bold:true}],margin:[0,0,0,mm(5)]}];
+ let g=groupData(wrap(E));if(!g.length)g=[['Brak danych',[['Nieokreślony papier','Nieokreślony',[]]]]];
+ g.forEach(([m,ps])=>{c.push(sec('MIESIĄC: '+m,mm(3),6+mm(2)));
+  ps.forEach(([n,t,rows])=>{c.push({text:[{text:'Papier: '},{text:n,bold:true},{text:'\u00a0\u00a0\u00a0Rodzaj: '+t}],margin:[0,0,0,mm(2)]});
+   c.push(tbl([20,28,43,24,22,19,20,19,57],['Data','Pracownik','Czynność','Ilość wykonana','Ilość odpadu','Jednostka','Zmiana','Czas (min)','Uwagi'],rows.map(({x})=>[cell(x.date),cell(x.employee),cell(x.activity),cell(x.quantity),cell(x.waste_quantity??0),cell(x.unit),cell(x.shift),cell(x.duration_minutes??0),cell(x.notes||'—')]),{head:'#123B69',odd:'#F8FAFC'},'Brak zarejestrowanych czynności.'))})});
+ c.push(sec('PODSUMOWANIE WEDŁUG NAZWY PAPIERU',0,6+mm(3),1));
+ const ps=paperStats(E);if(!ps.length)c.push({text:'Brak wpisów do podsumowania.'});
+ ps.forEach(o=>c.push({unbreakable:true,margin:[0,0,0,mm(4)],text:[{text:'Nazwa papieru: '},{text:o.k,bold:true},{text:'\n1. Liczba wpisów: '},{text:String(o.n),bold:true},{text:'\n2. Ilość wykonana: '},{text:unitsTxt(o.q),bold:true},{text:'\n3. Ilość odpadu: '},{text:unitsTxt(o.w),bold:true},{text:'\n4. Czas pracy: '},{text:hm(o.d),bold:true}]}));
+ c.push(sec('PRZEZBROJENIA MASZYNY',0,6+mm(3),1));
+ c.push(tbl([25,38,48,50,25,85],['Data','Pracownik','Maszyna','Następne zlecenie','Czas (min)','Uwagi'],C.map(x=>[cell(x.date),cell(x.employee),cell(x.machine),cell(x.next_order),cell(x.duration_minutes??0),cell(x.notes||'—')]),{head:'#7C2D12',odd:'#FFF7ED'},'Brak zarejestrowanych przezbrojeń.'));
+ c.push({margin:[0,0,0,0],text:[{text:'Liczba przezbrojeń: '},{text:String(C.length),bold:true},{text:'\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0Łączny czas przezbrojeń: '},{text:hm(C.reduce((s,x)=>s+Math.trunc(num(x.duration_minutes)),0)),bold:true}]});
+ return{pageSize:'A4',pageOrientation:'landscape',pageMargins:[mm(12),mm(12),mm(12),mm(12)],defaultStyle:{fontSize:8,lineHeight:1.25},content:c,footer:CFG.footer?()=>({text:CFG.footer,alignment:'center',fontSize:7,color:'#64748B'}):undefined}}
+async function report(orderOnly){if(!can('report'))return denied();
+ const flt=orderOnly==='filter',E=flt?fEntries().map(r=>r.x):orderOnly?A.entries.filter(x=>x.order_id===active):A.entries,C=flt?fChange().map(r=>r.x):orderOnly?A.changeovers.filter(x=>x.order_id===active):A.changeovers,m=$('rMsg');
+ m.textContent='Generuję PDF…';
+ try{await loadPdf()}catch(e){m.textContent='Nie udało się załadować generatora PDF (przy pierwszym użyciu potrzebny jest internet).';return}
+ try{pdfMake.createPdf(pdfDoc(E,C,flt?'Archiwum niezależne ('+fDesc()+')':orderOnly?active:'Archiwum niezależne')).download(flt?'raport_rozliczenia_pracy_filtr.pdf':orderOnly?'rozliczenie_'+active.replace(/[^\w.-]+/g,'_')+'.pdf':'raport_rozliczenia_pracy.pdf');logEv('Raport PDF',flt?'wg filtrów: '+fDesc():orderOnly?'zlecenie '+active:'pełny');m.textContent='Raport zapisano jako plik PDF.'}catch(e){m.textContent='Błąd generowania PDF: '+e.message}}
+/* ---- import / eksport ---- */
+function exportJson(){if(!can('data'))return denied();logEv('Eksport JSON',A.entries.length+' wpisów, '+A.changeovers.length+' przezbrojeń');const p={format:FMT,version:1,exported_at:new Date().toISOString().slice(0,19),entries:A.entries.filter(x=>x&&typeof x==='object'),changeovers:A.changeovers.filter(x=>x&&typeof x==='object')};
+ const d=new Date(),z=n=>String(n).padStart(2,'0'),name=`archiwum_rozliczen_pracy_${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.json`;
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(p,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function parseImport(text){let p;try{p=JSON.parse(text.replace(/^\uFEFF/,''))}catch(e){throw new Error('Plik importu nie jest poprawnym plikiem JSON UTF-8.')}
+ if(!p||typeof p!=='object'||Array.isArray(p))throw new Error('Plik importu musi zawierać obiekt archiwum rozliczenia pracy.');
+ if(p.format!=null&&p.format!==FMT)throw new Error('Wybrany plik nie jest eksportem archiwum rozliczenia pracy.');
+ if(p.format&&p.version!==1)throw new Error('Ta wersja eksportu rozliczenia pracy nie jest obsługiwana.');
+ if(!Array.isArray(p.entries)||!Array.isArray(p.changeovers))throw new Error('W pliku brakuje listy wpisów pracy lub przezbrojeń.');
+ const ok=a=>a.filter(x=>x&&typeof x==='object'&&!Array.isArray(x)),e=ok(p.entries),c=ok(p.changeovers);
+ return{e,c,skipped:p.entries.length-e.length+p.changeovers.length-c.length}}
+function pickImport(inp){if(!can('data')){inp.value='';return denied()}const f=inp.files[0];inp.value='';pending=null;$('impBtn').style.display='none';$('impMsg').textContent='';if(!f)return;
+ f.text().then(t=>{try{pending=parseImport(t);const[pe,de]=merge([...A.entries],pending.e),[pc,dc]=merge([...A.changeovers],pending.c);$('impInfo').textContent=`Znaleziono wpisy: ${pending.e.length} · przezbrojenia: ${pending.c.length}`+(pending.skipped?` · pominięte niepoprawne rekordy: ${pending.skipped}`:'')+` — Podgląd scalenia: nowe wpisy ${pe}, nowe przezbrojenia ${pc}, duplikaty do pominięcia ${de+dc}`;$('impBtn').disabled=!(pe||pc);$('impBtn').style.display=''}catch(err){$('impInfo').textContent='';msg('impMsg',err.message,0)}})}
+function merge(target,inc){const s=new Set(target.map(fp));let add=0,dup=0;inc.forEach(r=>{const k=fp(r);if(s.has(k)){dup++;return}target.push(r);s.add(k);add++});return[add,dup]}
+async function doImport(){if(!pending||!can('data'))return;let ae,de,ac,dc;const err=await commit(n=>{[ae,de]=merge(n.entries,pending.e);[ac,dc]=merge(n.changeovers,pending.c)});if(err)return msg('impMsg',err,0);pending=null;$('impBtn').style.display='none';$('impInfo').textContent='';
+ msg('impMsg',`Zaimportowano wpisy: ${ae} · przezbrojenia: ${ac} · duplikaty pominięte: ${de+dc}`,1);logEv('Import JSON',`dodano wpisy ${ae}, przezbrojenia ${ac}, duplikaty ${de+dc}`);renderAll()}
+/* ======== LOGOWANIE, UPRAWNIENIA, KONFIGURACJA, LOG (konta wspólne z modułem bobin) ======== */
+const USERS_URL='https://hjadatjvyrjexgmicggi.supabase.co/functions/v1/users-sync';
+const ROLES={admin:'Administrator',owner:'Właściciel',operator:'Operator'};
+const PLBL={'entry.add':'Wpisy pracy: dodawanie','entry.edit':'Wpisy pracy: edycja','entry.delete':'Wpisy pracy: usuwanie','co.add':'Przezbrojenia: dodawanie','co.edit':'Przezbrojenia: edycja','co.delete':'Przezbrojenia: usuwanie','report':'Raporty PDF','export':'Eksport CSV','data':'Import / eksport JSON','calc':'Kalkulator','log':'Log','config':'Konfiguracja'};
+const ALLP=Object.keys(PLBL),PERMS={admin:ALLP,owner:['entry.add','entry.edit','entry.delete','co.add','co.edit','co.delete','report','export','calc'],operator:['entry.add','co.add']};
+const DEP={'entry.edit':'entry.add','entry.delete':'entry.add','co.edit':'co.add','co.delete':'co.add'};
+const TABS={entries:'entry.add',changeovers:'co.add',reports:'report',data:'data',calc:'calc',config:'config',log:'log'};
+const LSU='m24_users',LSF='m24_lock',LSS='m24_session',LSCFG='m24_cfg',LSL='m24_log',CFGK='modul24_html:config',LOGK='modul24_html:log';
+let U={users:[],deleted:[]},uVer=null,uBusy=false,uAt=0,uOk=false,uTried=false,CFG={idleMin:30,company:'',footer:'',perms:{}},CV={exists:false,ver:null},LOG=[],LOGQ=[],logT=null,pinOpen=false,curView='',fails={},first=true,cloudInit=false;
+try{const v=JSON.parse(localStorage.getItem(LSU)||'null');if(v&&Array.isArray(v.users))U={users:v.users,deleted:Array.isArray(v.deleted)?v.deleted:[]}}catch(e){}
+try{CFG={...CFG,...JSON.parse(localStorage.getItem(LSCFG)||'{}')};CFG.perms=CFG.perms||{}}catch(e){}
+try{fails=JSON.parse(localStorage.getItem(LSF)||'{}')}catch(e){}
+try{LOG=JSON.parse(localStorage.getItem(LSL)||'[]')}catch(e){}
+const saveU=()=>{try{localStorage.setItem(LSU,JSON.stringify(U))}catch(e){}},saveCfgL=()=>{try{localStorage.setItem(LSCFG,JSON.stringify(CFG))}catch(e){}},uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36),te=new TextEncoder();
+/* --- PIN i sesja (identycznie jak w module bobin: PBKDF2-SHA256, 120 tys. iteracji) --- */
+async function hp(pin,salt){const k=await crypto.subtle.importKey('raw',te.encode(pin),'PBKDF2',false,['deriveBits']),b=await crypto.subtle.deriveBits({name:'PBKDF2',salt:te.encode(salt),iterations:120000,hash:'SHA-256'},k,256);return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function mkUser(name,role,pin,must){const salt=uid();return{id:uid(),name,role,salt,hash:await hp(pin,salt),must,updated:Date.now()}}
+const weak=p=>!/^\d{4,8}$/.test(p)?'PIN musi składać się z 4–8 cyfr.':(/^(\d)\1+$/.test(p)||'01234567890123'.includes(p)||'98765432109876'.includes(p))?'Zbyt prosty PIN (np. 1234, 0000). Wybierz inny.':'';
+const sess=()=>{try{const s=JSON.parse(localStorage.getItem(LSS)||'null');return s&&s.id&&s.exp>Date.now()&&s.max>Date.now()?s:null}catch(e){return null}};
+function setSess(id){const m=+CFG.idleMin,now=Date.now(),max=now+12*36e5;try{localStorage.setItem(LSS,JSON.stringify({id,exp:m>0?Math.min(max,now+m*6e4):max,max,t:now}))}catch(e){}}
+function touchSess(){const s=sess(),m=+CFG.idleMin,now=Date.now();if(!s||!(m>0)||now-(s.t||0)<10000)return;try{localStorage.setItem(LSS,JSON.stringify({...s,exp:Math.min(s.max,now+m*6e4),t:now}))}catch(e){}}
+const clearSess=()=>{try{localStorage.removeItem(LSS)}catch(e){}};
+const me=()=>U.users.find(u=>u.id===(sess()||{}).id),denied=()=>alert('Brak uprawnień do tej operacji.');
+function can(p){const u=me();if(!u)return false;const o=CFG.perms&&CFG.perms[u.id];return Array.isArray(o)?(o.includes(p)||(u.role==='admin'&&p==='config')):(PERMS[u.role]||[]).includes(p)}
+let idleT;const idleCheck=()=>{const s=sess(),m=+CFG.idleMin;if(!s||!me()||!(m>0))return;if(s.exp>Date.now()+500)idleT=setTimeout(idleCheck,s.exp-Date.now()+500);else logout(true)};
+const idleReset=()=>{clearTimeout(idleT);const m=+CFG.idleMin;if(m>0&&me()){touchSess();idleT=setTimeout(idleCheck,m*6e4)}};['click','keydown','touchstart'].forEach(e=>addEventListener(e,idleReset));
+addEventListener('storage',e=>{if(e.key===LSS){curView='';first=true;showApp()}});
+/* --- wspólna lista kont (Edge Function users-sync, wersjonowanie X-Base-Version) --- */
+const mesSig=(us,ds)=>JSON.stringify([us.map(u=>[u.id,u.name,u.role,u.salt,u.hash,!!u.must,+u.updated||0]).sort(),[...new Set(ds)].sort()]);
+function mesLatest(a,b){const m=new Map();[...a,...b].forEach(x=>{const o=m.get(x.id);if(!o||(+x.updated||0)>(+o.updated||0))m.set(x.id,x)});return[...m.values()]}
+async function syncUsers(force){if(uBusy||(!force&&Date.now()-uAt<8000))return;uBusy=true;uAt=Date.now();
+ try{for(let i=0;i<5;i++){const res=await fetch(USERS_URL+'?nocache='+Date.now(),{cache:'no-store'});if(!res.ok)break;uOk=true;
+   const v=res.headers.get('x-doc-version');uVer=v===null||isNaN(+v)?null:+v;const j=await res.json(),cu=Array.isArray(j.users)?j.users:[],cd=Array.isArray(j.deleted_users)?j.deleted_users:[];
+   if(!cu.length)break;
+   const before=mesSig(U.users,U.deleted),dset=new Set([...U.deleted,...cd]);U.deleted=[...dset];U.users=mesLatest(U.users,cu).filter(u=>!dset.has(u.id));
+   const ch=mesSig(U.users,U.deleted)!==before;if(ch){saveU();if(!me())curView='';showApp()}
+   const cdset=new Set(cd);if(mesSig(U.users,U.deleted)===mesSig(cu.filter(u=>!cdset.has(u.id)),cd))break;
+   const h={'Content-Type':'application/json'};if(uVer!==null)h['X-Base-Version']=String(uVer);
+   const r=await fetch(USERS_URL,{method:'POST',headers:h,body:JSON.stringify({users:U.users,deleted_users:U.deleted})});
+   if(r.status===409){await new Promise(z=>setTimeout(z,150+Math.random()*350));continue}break}}
+ catch(e){}finally{uBusy=false;uTried=true}}
+const usersSave=()=>{saveU();return syncUsers(true)};
+setInterval(()=>{if(!document.hidden&&uOk)syncUsers()},60000);
+/* --- ekrany logowania --- */
+function setView(n,h){const a=$('auth');a.style.display='flex';if(curView!==n){a.innerHTML=h;curView=n}}
+const pinIn=id=>`<input id="${id}" type="password" inputmode="numeric" maxlength="8" autocomplete="off">`;
+function retryUsers(){uTried=false;curView='';boot()}
+function gate(){
+ if(!U.users.length){if(!uOk){setView('load',`<div class="panel">${uTried?'Nie można pobrać listy kont (sprawdź internet).<br><br><button onclick="retryUsers()">Spróbuj ponownie</button>':'Ładowanie kont…'}</div>`);return false}
+  setView('setup',`<div class="panel"><h3>🔐 Pierwsze uruchomienie – utwórz Administratora</h3><p class="hint">Wpisz 4–8 cyfr (nie 1234, 0000 ani datę urodzenia). PIN-u nie da się odczytać, tylko zresetować (zrobi to inny Administrator). Konto będzie wspólne z modułem bobin.</p><label>Imię / nazwa<input id="suN"></label><label>PIN${pinIn('suP')}</label><label>Powtórz PIN${pinIn('suP2')}</label><p id="authErr" class="msg err"></p><button onclick="doSetup()">Utwórz konto Administratora</button></div>`);return false}
+ if(!me()){setView('login',`<div class="panel"><h3>🔐 Logowanie</h3><label>Użytkownik<select id="lgU">${[...U.users].sort((a,b)=>cmp(a.name.toLowerCase(),b.name.toLowerCase())).map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label><label>PIN<input id="lgP" type="password" inputmode="numeric" maxlength="8" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"></label><p id="authErr" class="msg err"></p><button onclick="doLogin()">Zaloguj</button></div>`);return false}
+ if(me().must||pinOpen){const f=me().must;setView('pin',`<div class="panel"><h3>🔑 ${f?'Ustaw własny PIN':'Zmień PIN'}</h3><p class="hint">${f?'Twój PIN jest tymczasowy (ustawił go Administrator). ':''}Nowy PIN: 4–8 cyfr, nie 1234 / 0000. Zmiana dotyczy też modułu bobin.</p><label>Obecny PIN${pinIn('pcO')}</label><label>Nowy PIN${pinIn('pcN')}</label><label>Powtórz nowy PIN${pinIn('pcN2')}</label><p id="authErr" class="msg err"></p><button onclick="doPin()">Zapisz</button> ${f?'<button onclick="logout()">Wyloguj</button>':'<button onclick="pinOpen=false;curView=\'\';showApp()">Anuluj</button>'}</div>`);return false}
+ $('auth').style.display='none';return true}
+const authErr=t=>{const e=$('authErr');if(e)e.textContent=t};
+async function doSetup(){try{const n=$('suN').value.trim(),p=$('suP').value,e=!n?'Podaj nazwę.':weak(p)||(p!==$('suP2').value?'PIN-y nie są identyczne.':'');if(e)return authErr(e);
+ const u=await mkUser(n,'admin',p,false);U.users.push(u);setSess(u.id);logEv('Utworzono Administratora',n);await usersSave();curView='';first=true;await afterLogin()}catch(e){authErr('Błąd: '+e.message)}}
+async function doLogin(){try{const pin0=$('lgP').value,uid0=$('lgU').value;await syncUsers(true);const u=U.users.find(x=>x.id===uid0);if(!u){curView='';return showApp()}
+ const f=fails[u.id]||{n:0,t:0};if(Date.now()<f.t)return authErr('Zbyt wiele prób. Odczekaj '+Math.ceil((f.t-Date.now())/1000)+' s.');
+ if(await hp(pin0,u.salt)===u.hash){delete fails[u.id];localStorage.setItem(LSF,JSON.stringify(fails));setSess(u.id);logEv('Logowanie');curView='';first=true;await afterLogin()}
+ else{f.n++;if(f.n>=5){f.t=Date.now()+6e4;f.n=0}fails[u.id]=f;localStorage.setItem(LSF,JSON.stringify(fails));logEv('Błędne logowanie',u.name,u.name);authErr('Błędny PIN.')}}catch(e){authErr('Błąd logowania: '+e.message+' (wymagany bezpieczny kontekst: https lub plik lokalny)')}}
+async function doPin(){try{const u=me(),n=$('pcN').value,e=await hp($('pcO').value,u.salt)!==u.hash?'Obecny PIN jest błędny.':weak(n)||(n!==$('pcN2').value?'PIN-y nie są identyczne.':'');if(e)return authErr(e);
+ u.salt=uid();u.hash=await hp(n,u.salt);u.must=false;u.updated=Date.now();logEv('Zmiana PIN-u');await usersSave();pinOpen=false;curView='';showApp()}catch(e){authErr('Błąd: '+e.message)}}
+function logout(auto){logEv(auto?'Wylogowanie (bezczynność)':'Wylogowanie');flushLog();clearSess();pinOpen=false;curView='';showApp()}
+/* --- konfiguracja (wiersz modul24_html:config) i log (wiersz modul24_html:log) w tej samej tabeli application_state --- */
+const hasCloud=()=>!!(CL.url&&CL.key);
+async function cfgPull(){if(!hasCloud())return;try{const r=await sb('GET','application_state?state_key=eq.'+enc(CFGK)+'&select=payload,updated_at');
+ if(r&&r.length){CV={exists:true,ver:r[0].updated_at};const c=r[0].payload&&r[0].payload.cfg;if(c&&typeof c==='object'){CFG={idleMin:30,company:'',footer:'',perms:{},...c};CFG.perms=CFG.perms||{};saveCfgL()}}else CV={exists:false,ver:null}}catch(e){}}
+async function cfgEdit(fn){fn(CFG);saveCfgL();if(!hasCloud())return true;
+ for(let t=0;t<3;t++){try{const body={payload:{cfg:CFG},updated_at:new Date().toISOString()};let r;
+  if(CV.exists){r=await sb('PATCH','application_state?state_key=eq.'+enc(CFGK)+'&updated_at=eq.'+enc(CV.ver),body);if(!r||!r.length){await cfgPull();fn(CFG);saveCfgL();continue}}
+  else{try{r=await sb('POST','application_state',{state_key:CFGK,...body})}catch(e){if(e.status===409){await cfgPull();fn(CFG);saveCfgL();continue}throw e}}
+  CV={exists:true,ver:r&&r[0]&&r[0].updated_at||body.updated_at};return true}catch(e){return false}}return false}
+function logEv(act,d,who){const u=me(),e={id:uid(),ts:new Date().toISOString(),user:who||(u?u.name:'—'),role:u?ROLES[u.role]:'',act,d:d||''};LOG.push(e);LOGQ.push(e);if(LOG.length>3000)LOG=LOG.slice(-3000);
+ try{localStorage.setItem(LSL,JSON.stringify(LOG.slice(-300)))}catch(_){}clearTimeout(logT);logT=setTimeout(flushLog,4000)}
+const mergeLog=(a,b)=>{const m=new Map();[...a,...b].forEach(e=>e&&e.id&&m.set(e.id,e));return[...m.values()].sort((x,y)=>cmp(x.ts,y.ts)).slice(-3000)};
+async function flushLog(){if(!LOGQ.length||!hasCloud())return;const sent=[...LOGQ];
+ for(let t=0;t<4;t++){try{const r=await sb('GET','application_state?state_key=eq.'+enc(LOGK)+'&select=payload,updated_at'),ver=r&&r.length?r[0].updated_at:null,remote=(r&&r.length&&r[0].payload&&r[0].payload.events)||[];
+   const ev=mergeLog(remote,sent),body={payload:{events:ev},updated_at:new Date().toISOString()};
+   if(ver){const w=await sb('PATCH','application_state?state_key=eq.'+enc(LOGK)+'&updated_at=eq.'+enc(ver),body);if(!w||!w.length)continue}else await sb('POST','application_state',{state_key:LOGK,...body});
+   const ids=new Set(sent.map(e=>e.id));LOGQ=LOGQ.filter(e=>!ids.has(e.id));LOG=mergeLog(LOG,ev);return}catch(e){if(e.status===409)continue;return}}}
+async function logPull(){if(!hasCloud())return;try{const r=await sb('GET','application_state?state_key=eq.'+enc(LOGK)+'&select=payload');if(r&&r.length)LOG=mergeLog(LOG,(r[0].payload&&r[0].payload.events)||[])}catch(e){}}
+setInterval(flushLog,30000);addEventListener('pagehide',flushLog);
+function renderLog(){const q=$('lQ').value.trim().toLowerCase(),u=$('lU').value,a=$('lA').value,f=$('lF').value,t=$('lT').value;
+ popSel('lU',[...new Set(LOG.map(e=>e.user))].sort(cmp),'Wszyscy');popSel('lA',[...new Set(LOG.map(e=>e.act))].sort(cmp),'Wszystkie');
+ const r=[...LOG].reverse().filter(e=>(!u||e.user===u)&&(!a||e.act===a)&&(!f||e.ts.slice(0,10)>=f)&&(!t||e.ts.slice(0,10)<=t)&&(!q||(e.user+' '+e.act+' '+e.d).toLowerCase().includes(q)));
+ $('lInfo').textContent=`Zdarzeń: ${r.length} z ${LOG.length}`+(r.length>500?' (pokazano 500 najnowszych)':'');
+ $('lTable').innerHTML=r.length?`<table><tr><th>Czas</th><th>Użytkownik</th><th>Rola</th><th>Zdarzenie</th><th>Szczegóły</th></tr>${r.slice(0,500).map(e=>`<tr><td>${esc(new Date(e.ts).toLocaleString('pl-PL'))}</td><td>${esc(e.user)}</td><td>${esc(e.role)}</td><td>${esc(e.act)}</td><td>${esc(e.d)}</td></tr>`).join('')}</table>`:'<p class="hint">Brak zdarzeń.</p>'}
+/* --- Konfiguracja: użytkownicy, uprawnienia, ustawienia --- */
+const nAdm=()=>U.users.filter(x=>x.role==='admin').length;
+function renderCfg(){if(!can('config'))return;
+ $('uList').innerHTML='<table><tr><th>Użytkownik</th><th>Rola</th><th></th></tr>'+U.users.map(u=>`<tr><td>${esc(u.name)}${u.must?' <span class="hint">(PIN tymczasowy)</span>':''}</td><td><select onchange="setRole('${u.id}',this.value)">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}"${k===u.role?' selected':''}>${v}</option>`).join('')}</select></td><td style="white-space:nowrap"><button onclick="resetPin('${u.id}')">Reset PIN</button> <button class="danger" onclick="delUser('${u.id}')">Usuń</button></td></tr>`).join('')+'</table>';
+ $('nuR').innerHTML=Object.entries(ROLES).map(([k,v])=>`<option value="${k}"${k==='operator'?' selected':''}>${v}</option>`).join('');
+ const cur=$('pmU').value;$('pmU').innerHTML=U.users.map(u=>`<option value="${u.id}"${u.id===cur?' selected':''}>${esc(u.name)} (${ROLES[u.role]})</option>`).join('');renderPerms();
+ $('cfIdle').value=CFG.idleMin;$('cfCompany').value=CFG.company||'';$('cfFooter').value=CFG.footer||''}
+async function addUser(){if(!can('config'))return denied();const n=$('nuN').value.trim(),p=$('nuP').value,r=$('nuR').value,e=!n?'Podaj nazwę.':U.users.some(u=>u.name.toLowerCase()===n.toLowerCase())?'Taki użytkownik już istnieje.':weak(p);if(e)return msg('cfMsg',e,0);
+ U.users.push(await mkUser(n,r,p,true));logEv('Użytkownik: dodano',n+' ('+ROLES[r]+')');$('nuN').value=$('nuP').value='';await usersSave();msg('cfMsg','Dodano. Użytkownik ustawi własny PIN przy pierwszym logowaniu.',1);renderCfg()}
+async function setRole(id,r){if(!can('config'))return denied();const u=U.users.find(x=>x.id===id);if(u.role==='admin'&&r!=='admin'&&nAdm()<2){alert('Musi pozostać co najmniej jeden Administrator.');return renderCfg()}
+ logEv('Użytkownik: zmiana roli',u.name+': '+ROLES[u.role]+' → '+ROLES[r]);u.role=r;u.updated=Date.now();await cfgEdit(c=>{delete c.perms[id]});await usersSave();renderCfg()}
+async function resetPin(id){if(!can('config'))return denied();const u=U.users.find(x=>x.id===id),p=prompt('Nowy PIN tymczasowy dla „'+u.name+'” (4–8 cyfr):');if(p===null)return;const e=weak(p);if(e)return alert(e);
+ u.salt=uid();u.hash=await hp(p,u.salt);u.must=true;u.updated=Date.now();logEv('Użytkownik: reset PIN',u.name);await usersSave();renderCfg()}
+async function delUser(id){if(!can('config'))return denied();const u=U.users.find(x=>x.id===id);if(u.role==='admin'&&nAdm()<2)return alert('Musi pozostać co najmniej jeden Administrator.');if(id===me().id)return alert('Nie możesz usunąć własnego konta.');
+ if(!confirm('Usunąć użytkownika „'+u.name+'”? Konta są wspólne z modułem bobin – konto zniknie w obu modułach.'))return;U.users=U.users.filter(x=>x.id!==id);U.deleted.push(id);logEv('Użytkownik: usunięto',u.name);await cfgEdit(c=>{delete c.perms[id]});await usersSave();renderCfg()}
+function renderPerms(){const id=$('pmU').value,u=U.users.find(x=>x.id===id);if(!u){$('pmBox').innerHTML='';return}const own=Array.isArray(CFG.perms[id]),cur=new Set(own?CFG.perms[id]:PERMS[u.role]);
+ $('pmBox').innerHTML=ALLP.map(p=>`<label class="tile"><input type="checkbox"${cur.has(p)?' checked':''}${u.role==='admin'&&p==='config'?' disabled':''} onchange="togglePerm('${id}','${p}',this.checked)">${PLBL[p]}</label>`).join('')+`<p class="hint" style="grid-column:1/-1">${own?'Uprawnienia indywidualne.':'Uprawnienia domyślne roli '+ROLES[u.role]+'.'} <button class="sec" onclick="resetPerms('${id}')">Przywróć domyślne roli</button></p>`}
+async function togglePerm(id,p,on){if(!can('config'))return denied();const u=U.users.find(x=>x.id===id),s=new Set(Array.isArray(CFG.perms[id])?CFG.perms[id]:PERMS[u.role]);
+ if(on){s.add(p);if(DEP[p])s.add(DEP[p])}else{s.delete(p);Object.keys(DEP).forEach(k=>{if(DEP[k]===p)s.delete(k)})}
+ const ok=await cfgEdit(c=>{c.perms[id]=[...s]});logEv('Uprawnienia: zmiana',u.name+': '+PLBL[p]+(on?' ✓':' ✗'));if(!ok)msg('cfMsg','Zapisano tylko lokalnie – brak połączenia z chmurą.',0);renderPerms()}
+async function resetPerms(id){if(!can('config'))return denied();await cfgEdit(c=>{delete c.perms[id]});logEv('Uprawnienia: przywrócono domyślne',(U.users.find(x=>x.id===id)||{}).name);renderPerms()}
+async function saveSettings(){if(!can('config'))return denied();const v=Math.max(0,Math.floor(+$('cfIdle').value||0)),ok=await cfgEdit(c=>{c.idleMin=v;c.company=$('cfCompany').value.trim();c.footer=$('cfFooter').value.trim()});
+ logEv('Konfiguracja: zapisano ustawienia','auto-wylogowanie '+v+' min');msg('cfSetMsg',ok?'Zapisano.':'Zapisano tylko lokalnie – brak połączenia z chmurą.',ok?1:0);idleReset()}
+/* --- start aplikacji --- */
+async function showApp(){if(!gate()){$('app').style.display='none';return}
+ const u=me();op=u.name;$('app').style.display='';
+ $('userBar').innerHTML=`<span class="sync">👤 ${esc(u.name)} · ${ROLES[u.role]}</span> <button class="hbtn" onclick="pinOpen=true;curView='';showApp()">🔑 PIN</button> <button class="hbtn" onclick="logout()">Wyloguj</button>`;
+ Object.entries(TABS).forEach(([t,p])=>$('tb_'+t).style.display=can(p)?'':'none');
+ const vis=[...document.querySelectorAll('section')].find(s=>s.classList.contains('show'));
+ if(first||!vis||!can(TABS[vis.id])){first=false;const t=Object.keys(TABS).find(t=>can(TABS[t]));if(t)tab(t,$('tb_'+t))}
+ renderAll();idleReset()}
+async function afterLogin(){await cfgPull();showApp();if(me()&&!cloudInit){cloudInit=true;initCloud()}}
+async function boot(){showApp();await syncUsers(true);if(me())await cfgPull();curView=me()?curView:'';showApp();if(me()&&!cloudInit){cloudInit=true;initCloud()}}
+const _tab=tab;tab=function(id,btn){_tab(id,btn);if(id==='log')logPull().then(renderLog);if(id==='config')renderCfg()};
+const dE=x=>x?`${x.date} · ${x.employee} · ${x.paper_name} · wyk. ${raw(x.quantity)}, odpad ${raw(x.waste_quantity??0)}, ${raw(x.duration_minutes??0)} min`:'',dC=x=>x?`${x.date} · ${x.employee} · ${x.machine} → ${x.next_order} · ${raw(x.duration_minutes??0)} min`:'';
+const dif=(a,b)=>Object.keys({...a,...b}).filter(k=>JSON.stringify(a[k])!==JSON.stringify(b[k])).map(k=>`${k}: ${raw(a[k])} → ${raw(b[k])}`).join('; ');
+
+initForms();renderAll();boot();
+</script></body></html>
